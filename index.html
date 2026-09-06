@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Troškovnik">
+<meta name="theme-color" content="#16624A">
+<title>Troškovnik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F1EFE9;
+    --card:#FBFAF7;
+    --ink:#1C1B18;
+    --muted:#6E6C63;
+    --line:#E2DDD1;
+    --accent:#16624A;
+    --accent-press:#124e3b;
+    --accent-soft:#E4EFE9;
+    --danger:#9A3B2E;
+    --radius:16px;
+    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;}
+  body{
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100dvh;
+    display:flex;
+    justify-content:center;
+    padding:0 16px calc(24px + var(--safe-b));
+    line-height:1.4;
+  }
+  .app{width:100%;max-width:460px;padding-top:max(18px,env(safe-area-inset-top));}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+  .brand{display:flex;align-items:baseline;gap:8px;}
+  .brand h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:26px;margin:0;letter-spacing:-.01em;}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);transform:translateY(-2px);}
+  .icon-btn{border:1px solid var(--line);background:var(--card);width:40px;height:40px;border-radius:12px;
+    display:grid;place-items:center;cursor:pointer;color:var(--ink);font-size:18px;}
+  .icon-btn:active{background:var(--paper);}
+
+  /* Amount hero */
+  .amount-wrap{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px 20px;text-align:center;margin-bottom:18px;
+  }
+  .amount-label{font-size:12.5px;color:var(--muted);letter-spacing:.02em;margin-bottom:6px;}
+  .amount-field{display:flex;align-items:center;justify-content:center;gap:6px;}
+  .euro{font-family:'Fraunces',Georgia,serif;font-size:40px;color:var(--muted);line-height:1;}
+  #amount{
+    font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:56px;line-height:1;
+    border:none;background:transparent;color:var(--ink);width:100%;max-width:260px;
+    text-align:center;padding:0;outline:none;letter-spacing:-.02em;
+  }
+  #amount::placeholder{color:#CDC7B8;}
+
+  /* Categories */
+  .section-label{font-size:12.5px;color:var(--muted);margin:0 2px 10px;}
+  .cats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+  .cat{
+    position:relative;
+    display:flex;flex-direction:column;align-items:center;gap:5px;
+    background:var(--card);border:1px solid var(--line);border-radius:13px;
+    padding:11px 6px 9px;cursor:pointer;transition:transform .06s ease,background .12s ease,border-color .12s ease;
+  }
+  .cat .emoji{font-size:21px;line-height:1;}
+  .cat .name{font-size:11.5px;color:var(--muted);text-align:center;}
+  .cat:active{transform:scale(.96);}
+  .cat.on{background:var(--accent);border-color:var(--accent);}
+  .cat.on .name{color:#fff;}
+  .cat.add{border-style:dashed;}
+  .cat.add .emoji{color:var(--accent);font-weight:600;}
+  .cat .del{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;
+    background:var(--danger);color:#fff;border:2px solid var(--paper);font-size:12px;line-height:1;
+    display:none;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+  .cats.editing .cat .del{display:flex;}
+  .cats.editing .cat.add{display:none;}
+
+  .cat-head{display:flex;justify-content:space-between;align-items:center;margin:0 2px 10px;}
+  .cat-head .section-label{margin:0;}
+  .edit-link{background:none;border:none;color:var(--accent);font:inherit;font-size:13px;cursor:pointer;padding:0;}
+
+  /* Date */
+  .date-row{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin-bottom:16px;}
+  .date-row label{font-size:14px;color:var(--muted);}
+  #date{font-family:inherit;font-size:15px;color:var(--ink);border:none;background:transparent;outline:none;text-align:right;}
+
+  /* Save */
+  .save{
+    width:100%;border:none;border-radius:14px;background:var(--accent);color:#fff;
+    font-family:inherit;font-size:17px;font-weight:600;padding:16px;cursor:pointer;
+    transition:background .12s ease,transform .06s ease;
+  }
+  .save:active{background:var(--accent-press);transform:scale(.99);}
+  .save:disabled{opacity:.55;cursor:default;}
+
+  /* Toast */
+  .toast{
+    position:fixed;left:50%;bottom:calc(22px + var(--safe-b));transform:translate(-50%,140%);
+    background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-size:14.5px;
+    display:flex;align-items:center;gap:8px;box-shadow:0 8px 30px rgba(0,0,0,.22);
+    transition:transform .32s cubic-bezier(.2,.8,.2,1);z-index:50;max-width:90vw;
+  }
+  .toast.show{transform:translate(-50%,0);}
+  .toast.err{background:var(--danger);}
+
+  /* Session summary */
+  .summary{margin-top:24px;border-top:1px solid var(--line);padding-top:16px;}
+  .summary-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .summary-head .t{font-size:13px;color:var(--muted);}
+  .summary-head .total{font-family:'Fraunces',serif;font-weight:600;font-size:18px;}
+  .log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+  .log li{display:flex;justify-content:space-between;font-size:13.5px;color:var(--muted);
+    padding:7px 2px;border-bottom:1px dashed var(--line);}
+  .log li span:last-child{color:var(--ink);font-weight:500;}
+  .empty{font-size:13px;color:var(--muted);padding:6px 2px;}
+
+  /* Settings sheet */
+  .overlay{position:fixed;inset:0;background:rgba(20,19,16,.4);opacity:0;pointer-events:none;
+    transition:opacity .2s ease;z-index:60;}
+  .overlay.open{opacity:1;pointer-events:auto;}
+  .sheet{position:fixed;left:0;right:0;bottom:0;background:var(--paper);z-index:70;
+    border-radius:20px 20px 0 0;padding:22px 20px calc(26px + var(--safe-b));
+    transform:translateY(110%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    max-width:460px;margin:0 auto;}
+  .sheet.open{transform:translateY(0);}
+  .sheet h2{font-family:'Fraunces',serif;font-size:20px;margin:0 0 4px;}
+  .sheet p{font-size:13px;color:var(--muted);margin:0 0 16px;}
+  .sheet input[type=url]{width:100%;font-family:inherit;font-size:15px;padding:13px 14px;
+    border:1px solid var(--line);border-radius:12px;background:var(--card);outline:none;color:var(--ink);}
+  .sheet input[type=url]:focus{border-color:var(--accent);}
+  .sheet input[type=text]{width:100%;font-family:inherit;font-size:15px;padding:13px 14px;
+    border:1px solid var(--line);border-radius:12px;background:var(--card);outline:none;color:var(--ink);}
+  .sheet input[type=text]:focus{border-color:var(--accent);}
+  .cat-form{display:flex;gap:10px;}
+  .cat-form .emoji-in{width:66px;flex:0 0 66px;text-align:center;font-size:22px;}
+  .reset-link{background:none;border:none;color:var(--muted);font:inherit;font-size:13px;
+    text-decoration:underline;cursor:pointer;padding:0;margin-top:14px;}
+  .sheet-actions{display:flex;gap:10px;margin-top:16px;}
+  .btn-ghost,.btn-solid{flex:1;font-family:inherit;font-size:15px;font-weight:600;padding:13px;border-radius:12px;cursor:pointer;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .btn-solid{background:var(--accent);border:none;color:#fff;}
+  .test-note{font-size:13px;margin-top:12px;min-height:18px;}
+  .test-note.ok{color:var(--accent);}
+  .test-note.bad{color:var(--danger);}
+  .link{background:none;border:none;color:var(--accent);font:inherit;text-decoration:underline;cursor:pointer;padding:0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span class="dot"></span><h1>Troškovnik</h1></div>
+    <button class="icon-btn" id="openSettings" aria-label="Postavke">⚙︎</button>
+  </header>
+
+  <div class="amount-wrap">
+    <div class="amount-label">Iznos</div>
+    <div class="amount-field">
+      <span class="euro">€</span>
+      <input id="amount" type="text" inputmode="decimal" placeholder="0,00" autocomplete="off" enterkeyhint="done">
+    </div>
+  </div>
+
+  <div class="cat-head">
+    <span class="section-label">Kategorija</span>
+    <button class="edit-link" id="editCats">Uredi</button>
+  </div>
+  <div class="cats" id="cats"></div>
+
+  <div class="date-row">
+    <label for="date">Datum</label>
+    <input id="date" type="date">
+  </div>
+
+  <button class="save" id="save">Spremi trošak</button>
+
+  <div class="summary">
+    <div class="summary-head">
+      <span class="t">Uneseno danas u aplikaciji</span>
+      <span class="total" id="sessTotal">€0,00</span>
+    </div>
+    <ul class="log" id="log"><li class="empty">Još ništa uneseno.</li></ul>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastText"></span></div>
+
+<div class="overlay" id="catOverlay"></div>
+<div class="sheet" id="catSheet">
+  <h2>Nova kategorija</h2>
+  <p>Emoji je neobavezan. Naziv se pojavi kao gumb.</p>
+  <div class="cat-form">
+    <input id="catEmoji" class="emoji-in" type="text" placeholder="🏷️" maxlength="4" autocomplete="off">
+    <input id="catName" type="text" placeholder="Naziv kategorije" autocomplete="off">
+  </div>
+  <div class="test-note bad" id="catNote"></div>
+  <div class="sheet-actions">
+    <button class="btn-ghost" id="catCancel">Odustani</button>
+    <button class="btn-solid" id="addCatBtn">Dodaj</button>
+  </div>
+  <button class="reset-link" id="resetCats">Vrati zadanih 15 kategorija</button>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="sheet">
+  <h2>Postavke</h2>
+  <p>Zalijepi poveznicu (Web app URL) koju si dobio/la nakon <em>Deploy</em> u Google Apps Scriptu.</p>
+  <input id="urlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" spellcheck="false">
+  <input id="keyInput" type="text" placeholder="Tajni ključ (npr. moja-tajna-2026)" autocomplete="off" spellcheck="false" style="margin-top:10px;">
+  <div class="test-note" id="testNote"></div>
+  <div class="sheet-actions">
+    <button class="btn-ghost" id="testBtn">Testiraj vezu</button>
+    <button class="btn-solid" id="saveUrl">Spremi</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---- Zadanih 15 kategorija ----
+  var DEFAULT_CATEGORIES = [
+    {e:'🛒', n:'Namirnice'}, {e:'🍽️', n:'Restorani'}, {e:'🚌', n:'Prijevoz'},
+    {e:'⛽', n:'Gorivo'},    {e:'💡', n:'Režije'},     {e:'🏠', n:'Stanovanje'},
+    {e:'💊', n:'Zdravlje'},  {e:'🎬', n:'Zabava'},     {e:'👕', n:'Odjeća'},
+    {e:'🧹', n:'Kućanstvo'}, {e:'📱', n:'Pretplate'},  {e:'💇', n:'Njega'},
+    {e:'✈️', n:'Putovanja'}, {e:'🎁', n:'Darovi'},     {e:'📦', n:'Ostalo'}
+  ];
+
+  // ---- Spremanje URL-a (localStorage uz sigurnu zamjenu) ----
+  var mem = {};
+  function store(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } }
+  function load(k){ try{ var v=localStorage.getItem(k); return v!==null?v:(mem[k]||''); }catch(e){ return mem[k]||''; } }
+
+  var eur = new Intl.NumberFormat('hr-HR',{style:'currency',currency:'EUR'});
+
+  var $ = function(id){ return document.getElementById(id); };
+  var selected = null;
+  var session = [];
+
+  // ---- Kategorije: učitaj spremljene ili zadane ----
+  function loadCategories(){
+    var raw = load('categories');
+    if(raw){ try{ var arr=JSON.parse(raw); if(Array.isArray(arr)&&arr.length) return arr; }catch(e){} }
+    return DEFAULT_CATEGORIES.slice();
+  }
+  function saveCategories(){ store('categories', JSON.stringify(categories)); }
+
+  var categories = loadCategories();
+  var editMode = false;
+  var catsEl = $('cats');
+
+  function renderCats(){
+    catsEl.innerHTML = '';
+    categories.forEach(function(c, idx){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cat' + (selected===c.n ? ' on' : '');
+
+      var em = document.createElement('span'); em.className='emoji'; em.textContent = c.e || '📦';
+      var nm = document.createElement('span'); nm.className='name'; nm.textContent = c.n;
+      b.appendChild(em); b.appendChild(nm);
+
+      var del = document.createElement('button');
+      del.type='button'; del.className='del'; del.textContent='×';
+      del.setAttribute('aria-label','Obriši '+c.n);
+      del.addEventListener('click', function(ev){ ev.stopPropagation(); removeCat(idx); });
+      b.appendChild(del);
+
+      b.addEventListener('click', function(){
+        if(editMode) return;
+        document.querySelectorAll('.cat.on').forEach(function(x){x.classList.remove('on');});
+        b.classList.add('on');
+        selected = c.n;
+      });
+      catsEl.appendChild(b);
+    });
+
+    // "Dodaj" pločica
+    var add = document.createElement('button');
+    add.type='button'; add.className='cat add';
+    var ae=document.createElement('span'); ae.className='emoji'; ae.textContent='＋';
+    var an=document.createElement('span'); an.className='name'; an.textContent='Dodaj';
+    add.appendChild(ae); add.appendChild(an);
+    add.addEventListener('click', openCatSheet);
+    catsEl.appendChild(add);
+
+    catsEl.classList.toggle('editing', editMode);
+  }
+
+  function removeCat(idx){
+    var removed = categories[idx];
+    categories.splice(idx,1);
+    if(selected===removed.n) selected=null;
+    saveCategories();
+    renderCats();
+  }
+
+  function addCat(emoji, name){
+    name = (name||'').trim();
+    if(!name){ return 'Unesi naziv'; }
+    if(categories.some(function(c){ return c.n.toLowerCase()===name.toLowerCase(); })){ return 'Kategorija već postoji'; }
+    categories.push({ e:(emoji||'').trim()||'🏷️', n:name });
+    saveCategories();
+    renderCats();
+    return null;
+  }
+
+  // Uredi / Gotovo
+  $('editCats').addEventListener('click', function(){
+    editMode = !editMode;
+    $('editCats').textContent = editMode ? 'Gotovo' : 'Uredi';
+    renderCats();
+  });
+
+  // Bottom sheet za novu kategoriju
+  function openCatSheet(){
+    $('catEmoji').value=''; $('catName').value=''; $('catNote').textContent='';
+    $('catOverlay').classList.add('open'); $('catSheet').classList.add('open');
+    setTimeout(function(){ $('catName').focus(); }, 250);
+  }
+  function closeCatSheet(){
+    $('catOverlay').classList.remove('open'); $('catSheet').classList.remove('open');
+  }
+  $('catOverlay').addEventListener('click', closeCatSheet);
+  $('catCancel').addEventListener('click', closeCatSheet);
+  $('addCatBtn').addEventListener('click', function(){
+    var err = addCat($('catEmoji').value, $('catName').value);
+    if(err){ $('catNote').textContent = err; return; }
+    closeCatSheet();
+    toast('Kategorija dodana');
+  });
+  $('catName').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); $('addCatBtn').click(); } });
+  $('resetCats').addEventListener('click', function(){
+    categories = DEFAULT_CATEGORIES.slice();
+    selected = null;
+    saveCategories();
+    renderCats();
+    closeCatSheet();
+    toast('Vraćene zadane kategorije');
+  });
+
+  renderCats();
+
+  // ---- Datum: danas ----
+  function todayISO(){
+    var d = new Date(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return d.getFullYear()+'-'+m+'-'+day;
+  }
+  $('date').value = todayISO();
+
+  // ---- Toast ----
+  var toastTimer;
+  function toast(msg, isErr){
+    var t = $('toast');
+    $('toastText').textContent = msg;
+    t.classList.toggle('err', !!isErr);
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+  }
+
+  // ---- Session log ----
+  function renderLog(){
+    var log = $('log');
+    if(session.length===0){ log.innerHTML='<li class="empty">Još ništa uneseno.</li>'; }
+    else{
+      log.innerHTML='';
+      session.slice().reverse().forEach(function(it){
+        var li=document.createElement('li');
+        li.innerHTML='<span>'+it.kategorija+'</span><span>'+eur.format(it.iznos)+'</span>';
+        log.appendChild(li);
+      });
+    }
+    var total = session.reduce(function(s,i){return s+i.iznos;},0);
+    $('sessTotal').textContent = eur.format(total);
+  }
+
+  // ---- Parse iznosa (podržava zarez i točku) ----
+  function parseAmount(raw){
+    if(!raw) return NaN;
+    var v = raw.trim().replace(/\s/g,'').replace(',', '.');
+    return Number(v);
+  }
+
+  // ---- Spremi trošak ----
+  var saveBtn = $('save');
+  saveBtn.addEventListener('click', function(){
+    var url = load('scriptUrl');
+    if(!url){ openSettings(); toast('Prvo dodaj poveznicu skripte', true); return; }
+
+    var iznos = parseAmount($('amount').value);
+    if(!isFinite(iznos) || iznos<=0){ toast('Unesi iznos', true); return; }
+    if(!selected){ toast('Odaberi kategoriju', true); return; }
+
+    var payload = { iznos: iznos, kategorija: selected, datum: $('date').value, key: load('scriptKey') };
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Spremam…';
+
+    fetch(url, {
+      method:'POST',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      redirect:'follow',
+      body: JSON.stringify(payload)
+    })
+    .then(function(r){ return r.json().catch(function(){ return {status:'ok'}; }); })
+    .then(function(res){
+      if(res && res.status==='error'){
+        throw new Error(res.message==='unauthorized' ? 'KEY' : (res.message||'Greška'));
+      }
+      session.push({iznos:iznos, kategorija:selected});
+      renderLog();
+      // reset
+      $('amount').value='';
+      document.querySelectorAll('.cat.on').forEach(function(x){x.classList.remove('on');});
+      selected=null;
+      toast('Trošak spremljen ✓');
+    })
+    .catch(function(err){
+      if(err && err.message==='KEY'){ toast('Neispravan tajni ključ.', true); openSettings(); }
+      else{ toast('Nije spremljeno. Provjeri vezu.', true); }
+    })
+    .finally(function(){
+      saveBtn.disabled=false;
+      saveBtn.textContent='Spremi trošak';
+    });
+  });
+
+  // ---- Settings ----
+  function openSettings(){
+    $('urlInput').value = load('scriptUrl');
+    $('keyInput').value = load('scriptKey');
+    $('testNote').textContent='';
+    $('testNote').className='test-note';
+    $('overlay').classList.add('open');
+    $('sheet').classList.add('open');
+  }
+  function closeSettings(){
+    $('overlay').classList.remove('open');
+    $('sheet').classList.remove('open');
+  }
+  $('openSettings').addEventListener('click', openSettings);
+  $('overlay').addEventListener('click', closeSettings);
+
+  $('saveUrl').addEventListener('click', function(){
+    var v = $('urlInput').value.trim();
+    if(v && !/^https:\/\/script\.google\.com\/.+\/exec$/.test(v)){
+      $('testNote').textContent='Poveznica bi trebala završavati s /exec';
+      $('testNote').className='test-note bad';
+      return;
+    }
+    store('scriptUrl', v);
+    store('scriptKey', $('keyInput').value.trim());
+    closeSettings();
+    toast('Postavke spremljene');
+  });
+
+  $('testBtn').addEventListener('click', function(){
+    var v = $('urlInput').value.trim();
+    var k = $('keyInput').value.trim();
+    if(!v){ $('testNote').textContent='Prvo zalijepi poveznicu.'; $('testNote').className='test-note bad'; return; }
+    $('testNote').textContent='Testiram…'; $('testNote').className='test-note';
+    fetch(v, {
+      method:'POST',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      redirect:'follow',
+      body: JSON.stringify({ test:true, key:k })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if(res && res.status==='ok'){ $('testNote').textContent='Veza i ključ rade ✓'; $('testNote').className='test-note ok'; }
+        else if(res && res.message==='unauthorized'){ $('testNote').textContent='Veza radi, ali ključ ne odgovara skripti.'; $('testNote').className='test-note bad'; }
+        else{ throw new Error(); }
+      })
+      .catch(function(){
+        $('testNote').textContent='Nema odgovora. Provjeri je li Deploy postavljen na “Anyone”.';
+        $('testNote').className='test-note bad';
+      });
+  });
+
+  // Enter u polju iznosa
+  $('amount').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); saveBtn.click(); } });
+
+  // Prvi put: otvori postavke ako nema URL-a
+  if(!load('scriptUrl')){ setTimeout(openSettings, 400); }
+
+  renderLog();
+})();
+</script>
+</body>
+</html>
