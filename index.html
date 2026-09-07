@@ -93,6 +93,15 @@
     background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin-bottom:16px;}
   .date-row label{font-size:14px;color:var(--muted);}
   #date{font-family:inherit;font-size:15px;color:var(--ink);border:none;background:transparent;outline:none;text-align:right;}
+  .note-in{width:100%;font-family:inherit;font-size:15px;color:var(--ink);background:var(--card);
+    border:1px solid var(--line);border-radius:13px;padding:13px 14px;outline:none;margin-bottom:16px;}
+  .note-in:focus{border-color:var(--accent);}
+  .note-in::placeholder{color:var(--muted);}
+  .type-toggle{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);
+    border-radius:13px;padding:4px;margin-bottom:16px;}
+  .type-opt{flex:1;border:none;background:transparent;font-family:inherit;font-size:14px;
+    color:var(--muted);padding:9px;border-radius:10px;cursor:pointer;transition:background .12s ease,color .12s ease;}
+  .type-opt.on{background:var(--accent);color:#fff;font-weight:500;}
 
   /* Save */
   .save{
@@ -176,10 +185,17 @@
   </div>
   <div class="cats" id="cats"></div>
 
+  <div class="type-toggle" id="typeToggle">
+    <button type="button" class="type-opt on" data-tip="Trošak">Trošak</button>
+    <button type="button" class="type-opt" data-tip="Prijenos">Prijenos</button>
+  </div>
+
   <div class="date-row">
     <label for="date">Datum</label>
     <input id="date" type="date">
   </div>
+
+  <input id="note" class="note-in" type="text" placeholder="Bilješka (neobavezno)" autocomplete="off" enterkeyhint="done">
 
   <button class="save" id="save">Spremi trošak</button>
 
@@ -207,19 +223,31 @@
     <button class="btn-ghost" id="catCancel">Odustani</button>
     <button class="btn-solid" id="addCatBtn">Dodaj</button>
   </div>
-  <button class="reset-link" id="resetCats">Vrati zadanih 15 kategorija</button>
+  <button class="reset-link" id="resetCats">Vrati zadanih 20 kategorija</button>
 </div>
 
 <div class="overlay" id="overlay"></div>
 <div class="sheet" id="sheet">
   <h2>Postavke</h2>
-  <p>Zalijepi poveznicu (Web app URL) koju si dobio/la nakon <em>Deploy</em> u Google Apps Scriptu.</p>
-  <input id="urlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" spellcheck="false">
-  <input id="keyInput" type="text" placeholder="Tajni ključ (npr. moja-tajna-2026)" autocomplete="off" spellcheck="false" style="margin-top:10px;">
-  <div class="test-note" id="testNote"></div>
-  <div class="sheet-actions">
-    <button class="btn-ghost" id="testBtn">Testiraj vezu</button>
-    <button class="btn-solid" id="saveUrl">Spremi</button>
+
+  <div id="connectedBox" style="display:none;">
+    <p><span style="color:var(--accent);font-weight:500;">Povezano ✓</span> — poveznica i tajni ključ spremljeni su na ovom uređaju i skriveni.</p>
+    <div class="test-note" id="connNote"></div>
+    <div class="sheet-actions">
+      <button class="btn-ghost" id="connTestBtn">Testiraj vezu</button>
+      <button class="btn-solid" id="changeBtn">Promijeni</button>
+    </div>
+  </div>
+
+  <div id="setupBox">
+    <p>Zalijepi poveznicu (Web app URL) koju si dobio/la nakon <em>Deploy</em> u Google Apps Scriptu.</p>
+    <input id="urlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" spellcheck="false">
+    <input id="keyInput" type="text" placeholder="Tajni ključ (npr. moja-tajna-2026)" autocomplete="off" spellcheck="false" style="margin-top:10px;">
+    <div class="test-note" id="testNote"></div>
+    <div class="sheet-actions">
+      <button class="btn-ghost" id="testBtn">Testiraj vezu</button>
+      <button class="btn-solid" id="saveUrl">Spremi</button>
+    </div>
   </div>
 </div>
 
@@ -231,8 +259,20 @@
     {e:'⛽', n:'Gorivo'},    {e:'💡', n:'Režije'},     {e:'🏠', n:'Stanovanje'},
     {e:'💊', n:'Zdravlje'},  {e:'🎬', n:'Zabava'},     {e:'👕', n:'Odjeća'},
     {e:'🧹', n:'Kućanstvo'}, {e:'📱', n:'Pretplate'},  {e:'💇', n:'Njega'},
-    {e:'✈️', n:'Putovanja'}, {e:'🎁', n:'Darovi'},     {e:'📦', n:'Ostalo'}
+    {e:'✈️', n:'Putovanja'}, {e:'🎁', n:'Darovi'},     {e:'📦', n:'Ostalo'},
+    {e:'🏃', n:'Sport'},     {e:'💼', n:'Posao'},      {e:'🐷', n:'Štednja'},
+    {e:'🪙', n:'Džeparac'},  {e:'📈', n:'Investiranje'}
   ];
+
+  // Nove zadane kategorije po verziji (dodaju se postojećim korisnicima samo jednom)
+  var CATS_VERSION = 3;
+  var NEW_BY_VERSION = {
+    2: [ {e:'🏃', n:'Sport'}, {e:'💼', n:'Posao'}, {e:'🐷', n:'Štednja'}, {e:'🪙', n:'Džeparac'} ],
+    3: [ {e:'📈', n:'Investiranje'} ]
+  };
+
+  // Kategorije koje se broje kao prijenos, ne trošak (auto-postavljaju tip)
+  var TRANSFER_CATS = ['Štednja', 'Džeparac', 'Investiranje'];
 
   // ---- Spremanje URL-a (localStorage uz sigurnu zamjenu) ----
   var mem = {};
@@ -248,14 +288,39 @@
   // ---- Kategorije: učitaj spremljene ili zadane ----
   function loadCategories(){
     var raw = load('categories');
-    if(raw){ try{ var arr=JSON.parse(raw); if(Array.isArray(arr)&&arr.length) return arr; }catch(e){} }
-    return DEFAULT_CATEGORIES.slice();
+    var arr = null;
+    if(raw){ try{ var p=JSON.parse(raw); if(Array.isArray(p)&&p.length) arr=p; }catch(e){} }
+    if(!arr){ store('catsVersion', String(CATS_VERSION)); return DEFAULT_CATEGORIES.slice(); }
+    // Postojeći korisnik: dodaj samo nove kategorije koje još nema
+    var ver = parseInt(load('catsVersion')||'1', 10);
+    if(ver < CATS_VERSION){
+      for(var v=ver+1; v<=CATS_VERSION; v++){
+        (NEW_BY_VERSION[v]||[]).forEach(function(d){
+          if(!arr.some(function(c){ return c.n.toLowerCase()===d.n.toLowerCase(); })){ arr.push(d); }
+        });
+      }
+      store('categories', JSON.stringify(arr));
+      store('catsVersion', String(CATS_VERSION));
+    }
+    return arr;
   }
   function saveCategories(){ store('categories', JSON.stringify(categories)); }
 
   var categories = loadCategories();
   var editMode = false;
   var catsEl = $('cats');
+
+  // ---- Tip: Trošak / Prijenos ----
+  var tipValue = 'Trošak';
+  function setTip(v){
+    tipValue = v;
+    document.querySelectorAll('.type-opt').forEach(function(o){
+      o.classList.toggle('on', o.getAttribute('data-tip') === v);
+    });
+  }
+  document.querySelectorAll('.type-opt').forEach(function(o){
+    o.addEventListener('click', function(){ setTip(o.getAttribute('data-tip')); });
+  });
 
   function renderCats(){
     catsEl.innerHTML = '';
@@ -279,6 +344,7 @@
         document.querySelectorAll('.cat.on').forEach(function(x){x.classList.remove('on');});
         b.classList.add('on');
         selected = c.n;
+        setTip(TRANSFER_CATS.indexOf(c.n) !== -1 ? 'Prijenos' : 'Trošak');
       });
       catsEl.appendChild(b);
     });
@@ -375,7 +441,11 @@
       log.innerHTML='';
       session.slice().reverse().forEach(function(it){
         var li=document.createElement('li');
-        li.innerHTML='<span>'+it.kategorija+'</span><span>'+eur.format(it.iznos)+'</span>';
+        var left=document.createElement('span');
+        left.textContent = it.biljeska ? (it.kategorija+' · '+it.biljeska) : it.kategorija;
+        var right=document.createElement('span');
+        right.textContent = eur.format(it.iznos);
+        li.appendChild(left); li.appendChild(right);
         log.appendChild(li);
       });
     }
@@ -400,7 +470,8 @@
     if(!isFinite(iznos) || iznos<=0){ toast('Unesi iznos', true); return; }
     if(!selected){ toast('Odaberi kategoriju', true); return; }
 
-    var payload = { iznos: iznos, kategorija: selected, datum: $('date').value, key: load('scriptKey') };
+    var biljeska = $('note').value.trim();
+    var payload = { iznos: iznos, kategorija: selected, datum: $('date').value, biljeska: biljeska, tip: tipValue, key: load('scriptKey') };
 
     saveBtn.disabled = true;
     saveBtn.textContent = 'Spremam…';
@@ -416,12 +487,14 @@
       if(res && res.status==='error'){
         throw new Error(res.message==='unauthorized' ? 'KEY' : (res.message||'Greška'));
       }
-      session.push({iznos:iznos, kategorija:selected});
+      session.push({iznos:iznos, kategorija:selected, biljeska:biljeska});
       renderLog();
       // reset
       $('amount').value='';
+      $('note').value='';
       document.querySelectorAll('.cat.on').forEach(function(x){x.classList.remove('on');});
       selected=null;
+      setTip('Trošak');
       toast('Trošak spremljen ✓');
     })
     .catch(function(err){
@@ -435,11 +508,21 @@
   });
 
   // ---- Settings ----
+  function showSetupView(){
+    $('connectedBox').style.display = 'none';
+    $('setupBox').style.display = '';
+  }
+  function showConnectedView(){
+    $('setupBox').style.display = 'none';
+    $('connectedBox').style.display = '';
+  }
   function openSettings(){
     $('urlInput').value = load('scriptUrl');
     $('keyInput').value = load('scriptKey');
-    $('testNote').textContent='';
-    $('testNote').className='test-note';
+    $('testNote').textContent=''; $('testNote').className='test-note';
+    $('connNote').textContent=''; $('connNote').className='test-note';
+    // Ako je sve postavljeno, prikaži skriveni ("Povezano") prikaz
+    if(load('scriptUrl') && load('scriptKey')){ showConnectedView(); } else { showSetupView(); }
     $('overlay').classList.add('open');
     $('sheet').classList.add('open');
   }
@@ -449,6 +532,7 @@
   }
   $('openSettings').addEventListener('click', openSettings);
   $('overlay').addEventListener('click', closeSettings);
+  $('changeBtn').addEventListener('click', showSetupView);
 
   $('saveUrl').addEventListener('click', function(){
     var v = $('urlInput').value.trim();
@@ -463,27 +547,33 @@
     toast('Postavke spremljene');
   });
 
-  $('testBtn').addEventListener('click', function(){
-    var v = $('urlInput').value.trim();
-    var k = $('keyInput').value.trim();
-    if(!v){ $('testNote').textContent='Prvo zalijepi poveznicu.'; $('testNote').className='test-note bad'; return; }
-    $('testNote').textContent='Testiram…'; $('testNote').className='test-note';
-    fetch(v, {
+  // Zajednički test veze
+  function testConnection(url, key, noteEl){
+    if(!url){ noteEl.textContent='Nema poveznice.'; noteEl.className='test-note bad'; return; }
+    noteEl.textContent='Testiram…'; noteEl.className='test-note';
+    fetch(url, {
       method:'POST',
       headers:{ 'Content-Type':'text/plain;charset=utf-8' },
       redirect:'follow',
-      body: JSON.stringify({ test:true, key:k })
+      body: JSON.stringify({ test:true, key:key })
     })
       .then(function(r){ return r.json(); })
       .then(function(res){
-        if(res && res.status==='ok'){ $('testNote').textContent='Veza i ključ rade ✓'; $('testNote').className='test-note ok'; }
-        else if(res && res.message==='unauthorized'){ $('testNote').textContent='Veza radi, ali ključ ne odgovara skripti.'; $('testNote').className='test-note bad'; }
+        if(res && res.status==='ok'){ noteEl.textContent='Veza i ključ rade ✓'; noteEl.className='test-note ok'; }
+        else if(res && res.message==='unauthorized'){ noteEl.textContent='Veza radi, ali ključ ne odgovara skripti.'; noteEl.className='test-note bad'; }
         else{ throw new Error(); }
       })
       .catch(function(){
-        $('testNote').textContent='Nema odgovora. Provjeri je li Deploy postavljen na “Anyone”.';
-        $('testNote').className='test-note bad';
+        noteEl.textContent='Nema odgovora. Provjeri je li Deploy postavljen na “Anyone”.';
+        noteEl.className='test-note bad';
       });
+  }
+
+  $('testBtn').addEventListener('click', function(){
+    testConnection($('urlInput').value.trim(), $('keyInput').value.trim(), $('testNote'));
+  });
+  $('connTestBtn').addEventListener('click', function(){
+    testConnection(load('scriptUrl'), load('scriptKey'), $('connNote'));
   });
 
   // Enter u polju iznosa
